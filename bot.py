@@ -42,7 +42,7 @@ USER_AGENTS = [
 
 def fetch_good_proxies(chat_id):
     global proxies_list
-    bot.send_message(chat_id, "🔄 Nag-download og bag-ong elite proxies (Very Fast)...")
+    bot.send_message(chat_id, "🔄 Nag-download og bag-ong elite proxies ...")
     try:
         url = "https://api.good-proxies.ru/api"
         params = {'key': "3269305ce8094af10e5933fe67db8529", 'ping': "3000", 'time': "300", 'anon': "elite", 'access': "supportsHttps"}
@@ -52,7 +52,7 @@ def fetch_good_proxies(chat_id):
             new_proxies = [line.strip() for line in response.text.splitlines() if line.strip() and ':' in line]
             if new_proxies:
                 proxies_list = new_proxies
-                bot.send_message(chat_id, f"✅ **VERY FAST** - Nakarga {len(proxies_list)} elite proxies!")
+                bot.send_message(chat_id, f"✅ **iyot** - Nakarga {len(proxies_list)} elite proxies!")
                 return True
     except:
         pass
@@ -458,9 +458,9 @@ def mass_proxy_paste(msg, ccs, p_type_idx):
 
 def start_mass_check(ccs, use_proxy, proxy_type, chat_id):
     stats.update({"charged":0,"approved":0,"declined":0,"error":0})
-    bot.send_message(chat_id, f"🔄 Nagsugod sa {len(ccs)} ka cards... **VERY VERY FAST MODE (50 Threads)**")
+    bot.send_message(chat_id, f"🔄 Nagsugod sa {len(ccs)} ka cards... **paspasan ang bayo**")
     worker_args = partial(worker, use_proxy=use_proxy, proxy_type=proxy_type, chat_id=chat_id)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=30) as ex:
         ex.map(worker_args, ccs)
     clean_declined_files()
     bot.send_message(chat_id, f"""✅ **Human na ang Check!**
