@@ -33,7 +33,7 @@ BRAND_ICON = '→ Brand →'
 BANK_ICON = '→ Bank →'
 COUNTRY_ICON = '→ Country →'
 DEV_ICON = '→ Dev →'
-STATUS_EMOJI = {"CHARGED": "🔥", "APPROVED": "✅", "DECLINED": "❌", "ERROR": "⚠️"}
+STATUS_EMOJI = {"CHARGED": "🔥", "APPROVED": "✓", "DECLINED": "𝐱", "ERROR": "⚠️"}
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
